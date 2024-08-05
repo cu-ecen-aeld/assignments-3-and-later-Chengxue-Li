@@ -66,11 +66,13 @@ bool do_exec(int count, ...)
 */
     pid_t p = fork();
     if (!p) {
-        if (execv(command[0], command) == -1) {
+        execv(command[0], command);
+    } else {
+        int stat;
+        wait(&stat);
+        if (WIFEXITED(stat)) {
             return false;
         }
-    } else {
-        wait(NULL);
     }
 
     va_end(args);
@@ -113,7 +115,11 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
         close(fd);
         execvp(command[0], command);
     } else {
-        wait(NULL);
+        int stat;
+        wait(&stat);
+        if (WIFEXITED(stat)) {
+            return false;
+        }
     }
 
     va_end(args);
