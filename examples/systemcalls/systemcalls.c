@@ -23,7 +23,7 @@ bool do_system(const char *cmd)
  *   or false() if it returned a failure
 */
 
-    return !system(cmd);
+    return system(cmd) == 0;
 }
 
 /**
@@ -66,7 +66,7 @@ bool do_exec(int count, ...)
 */
     pid_t p = fork();
     if (!p) {
-        execv(command[0], command + 1);
+        execv(command[0], command);
     } else {
         wait(NULL);
     }
@@ -109,7 +109,7 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
         int fd = open(outputfile, O_WRONLY|O_TRUNC|O_CREAT, 0644);
         dup2(fd, 1);
         close(fd);
-        execvp(command[0], command + 1);
+        execvp(command[0], command);
     } else {
         wait(NULL);
     }
