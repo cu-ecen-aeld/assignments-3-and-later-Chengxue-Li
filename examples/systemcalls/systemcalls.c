@@ -1,6 +1,10 @@
 #include "systemcalls.h"
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 /**
  * @param cmd the command to execute with system()
@@ -105,7 +109,7 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
         int fd = open(outputfile, O_WRONLY|O_TRUNC|O_CREAT, 0644);
         dup2(fd, 1);
         close(fd);
-        execv(command[0], command + 1);
+        execvp(command[0], command + 1);
     } else {
         wait(NULL);
     }
