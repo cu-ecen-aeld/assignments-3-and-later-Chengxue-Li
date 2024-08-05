@@ -66,7 +66,9 @@ bool do_exec(int count, ...)
 */
     pid_t p = fork();
     if (!p) {
-        execv(command[0], command);
+        if (execv(command[0], command) == -1) {
+            return false;
+        }
     } else {
         wait(NULL);
     }
