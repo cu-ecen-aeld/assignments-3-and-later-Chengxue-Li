@@ -70,7 +70,7 @@ bool do_exec(int count, ...)
     } else {
         int stat;
         wait(&stat);
-        if (WIFEXITED(stat) != 0) {
+        if (WEXITSTATUS(stat) != 0) {
             return false;
         }
     }
@@ -117,7 +117,7 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     } else {
         int stat;
         wait(&stat);
-        if (WIFEXITED(stat) != 0) {
+        if (WEXITSTATUS(stat) != 0) {
             return false;
         }
     }
