@@ -1,3 +1,4 @@
+#!/bin/sh
 # if args is less than 2, return 1
 if [ "$#" -lt 2 ]; then
     exit 1
