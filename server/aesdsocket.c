@@ -23,33 +23,6 @@ void close_all() {
 
 int main(int argc, char *argv[]) {
 
-    if (argc == 2) {
-        if (strcmp(argv[1], "-d") == 0) {
-            pid_t pid;
-            int i;
-            pid = fork();
-            if (pid == -1) {
-                exit(-1);
-            }
-            else if (pid != 0) {
-                exit(0);
-            }
-            if (setsid() == -1) {
-                exit(-1);
-            }
-            if (chdir("/") == -1) {
-                exit(-1);
-            }
-            int fdlimit = (int)sysconf(_SC_OPEN_MAX);
-            for (i = 0; i < fdlimit; i++) {
-                close(i);
-            }
-            open("/dev/null", O_RDWR);
-            dup(0);
-            dup(0);
-        }
-    }
-
     fd = client_sockfd = sockfd = -1;
     signal_flag = -1;
     servinfo = NULL;
@@ -91,6 +64,31 @@ int main(int argc, char *argv[]) {
         syslog(LOG_ERR, "ERROR on binding");
         close_all();
         exit(-1);
+    }
+
+    if (argc == 2) {
+        if (strcmp(argv[1], "-d") == 0) {
+            pid_t pid;
+            pid = fork();
+            if (pid == -1) {
+                syslog(LOG_ERR, "Error on fork");
+                exit(-1);
+            }
+            else if (pid != 0) {
+                exit(0);
+            }
+            if (setsid() == -1) {
+                syslog(LOG_ERR, "Error on setsid");
+                exit(-1);
+            }
+            if (chdir("/") == -1) {
+                syslog(LOG_ERR, "Error on chdir");
+                exit(-1);
+            }
+            close(STDIN_FILENO);
+            close(STDOUT_FILENO);
+            close(STDERR_FILENO);
+        }
     }
 
     if (listen(sockfd, 10) < 0) {
