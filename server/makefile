@@ -10,7 +10,7 @@ all: $(TARGET)
 
 # Build the writer application
 $(TARGET): $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -o $@ $^ -lpthread
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@

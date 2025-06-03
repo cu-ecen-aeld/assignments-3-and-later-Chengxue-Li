@@ -17,16 +17,35 @@
 #include <fcntl.h>
 #include <arpa/inet.h>
 #include <linux/fs.h>
+#include <bits/pthreadtypes.h>
+#include <pthread.h>
+#include <time.h>
+#include "queue.h"
+
+struct node {
+    pthread_t thread_id;
+    int thread_complete; // Flag to indicate if the thread has completed
+    TAILQ_ENTRY(node) entries;
+};
+
+struct thread_data {
+    int client_sockfd;
+    char client_ip[INET_ADDRSTRLEN];
+    struct node thread_node;
+};
 
 int fd;
-int client_sockfd;
 int sockfd;
 struct addrinfo *servinfo;
 
 volatile int signal_flag;
 
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
 static void signal_handler(int signo);
 void close_all();
+void *timer_routine(void *);
+void *routine(void *);
 int main(int argc, char *argv[]);
 
 #endif
