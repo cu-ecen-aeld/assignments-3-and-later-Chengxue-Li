@@ -1,7 +1,8 @@
 # Variables
-CC = $(CROSS_COMPILE)gcc
-CFLAGS = -Wall -Werror -g
-TARGET = aesdsocket
+CC ?= $(CROSS_COMPILE)gcc
+CFLAGS ?= -Wall -Werror -g
+TARGET ?= aesdsocket
+LDFLAGS ?= -lpthread -lrt
 SRC = aesdsocket.c
 OBJ = $(SRC:.c=.o)
 
@@ -10,7 +11,7 @@ all: $(TARGET)
 
 # Build the writer application
 $(TARGET): $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $^ -lpthread
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
