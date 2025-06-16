@@ -6,9 +6,6 @@ static void signal_handler(int signo) {
 }
 
 void close_all() {
-    if (fd != -1) {
-        close(fd);
-    }
     if (sockfd != -1) {
         close(sockfd);
     }
@@ -16,23 +13,6 @@ void close_all() {
         freeaddrinfo(servinfo);
     }
     closelog();
-}
-
-void *timer_routine(void *arg) {
-    char buffer[80];
-    while (1) {
-        sleep(10); // sleep for 10 seconds
-        time_t now;
-        time(&now);
-        struct tm *local = localtime(&now);
-        strftime(buffer, 80, "timestamp:%a, %d %b %Y %T %z\n", local);
-        pthread_mutex_lock(&mutex);
-        write(fd, buffer, strlen(buffer));
-        pthread_mutex_unlock(&mutex);
-        
-    }
-
-    return 0;
 }
 
 void *routine(void *arg) {
@@ -64,19 +44,50 @@ void *routine(void *arg) {
             pthread_mutex_lock(&mutex);
             lock_flag = 1;
         }
+
+            // Open the file for writing
+        int fd = open(
+            "/dev/aesdchar",
+            O_RDWR | O_CREAT | O_TRUNC,
+            S_IWUSR | S_IRUSR | S_IWGRP | S_IRGRP | S_IROTH
+        );
+        if (fd == -1) {
+            syslog(LOG_ERR, "Error opening file");
+            close(client_sockfd);
+            new_thread_data->thread_node.thread_complete = 1;
+            lock_flag = 0;
+            pthread_mutex_unlock(&mutex);
+            return new_thread_data;
+        }
         
         if (write(fd, buffer, bytes_received) == -1) {
             syslog(LOG_ERR, "Error writing to file");
             close(client_sockfd);
             new_thread_data->thread_node.thread_complete = 1;
+            lock_flag = 0;
+            pthread_mutex_unlock(&mutex);
+            close(fd);
             return new_thread_data;
         }
         for (int i = 0; i < sizeof(buffer); i++) {
             // Detect is it a packet
             if (buffer[i] == '\n') {
-                // If it is a packet, seek to the beginning of the file and send the entire file content
-                if (lseek(fd, 0, SEEK_SET) == -1) {
-                    syslog(LOG_ERR, "Error seeking to beginning of file");
+                // If it is a packet, close the file and reopen it for reading
+                if (close(fd) == -1) {
+                    syslog(LOG_ERR, "Error closing file");
+                    close(client_sockfd);
+                    new_thread_data->thread_node.thread_complete = 1;
+                    lock_flag = 0;
+                    pthread_mutex_unlock(&mutex);
+                    return new_thread_data;
+                }
+                fd = open(
+                    "/dev/aesdchar",
+                    O_RDONLY,
+                    S_IWUSR | S_IRUSR | S_IWGRP | S_IRGRP | S_IROTH
+                );
+                if (fd == -1) {
+                    syslog(LOG_ERR, "Error reopening file for reading");
                     close(client_sockfd);
                     new_thread_data->thread_node.thread_complete = 1;
                     lock_flag = 0;
@@ -94,6 +105,8 @@ void *routine(void *arg) {
                         return new_thread_data;
                     }
                     if (bytes_read == 0) {
+                        // No more data to read, break the loop
+                        close(fd);
                         lock_flag = 0;
                         pthread_mutex_unlock(&mutex);
                         break;
@@ -118,7 +131,7 @@ void *routine(void *arg) {
 
 int main(int argc, char *argv[]) {
 
-    fd = sockfd = -1;
+    sockfd = -1;
     signal_flag = -1;
     servinfo = NULL;
 
@@ -135,18 +148,6 @@ int main(int argc, char *argv[]) {
 
     if (signal(SIGTERM, signal_handler) == SIG_ERR) {
         syslog(LOG_ERR, "Error setting up signal handler");
-        close_all();
-        exit(-1);
-    }
-
-    // Open the file for writing
-    fd = open(
-        "/var/tmp/aesdsocketdata",
-        O_RDWR | O_CREAT | O_APPEND,
-        S_IWUSR | S_IRUSR | S_IWGRP | S_IRGRP | S_IROTH
-    );
-    if (fd == -1) {
-        syslog(LOG_ERR, "Error opening file");
         close_all();
         exit(-1);
     }
@@ -200,13 +201,6 @@ int main(int argc, char *argv[]) {
             close(STDOUT_FILENO);
             close(STDERR_FILENO);
         }
-    }
-
-    pthread_t timer_thread_id;
-    if (pthread_create(&timer_thread_id, NULL, timer_routine, NULL)) {
-        syslog(LOG_ERR, "Error creating timer thread");
-        close_all();
-        exit(-1);
     }
 
     if (listen(sockfd, 10) < 0) {
@@ -282,11 +276,8 @@ int main(int argc, char *argv[]) {
                 free(curr_thread_data);
             }
 
-            pthread_cancel(timer_thread_id);
-            pthread_join(timer_thread_id, NULL);
-
             close_all();
-            remove("/var/tmp/aesdsocketdata");
+
             exit(0);
         }
         

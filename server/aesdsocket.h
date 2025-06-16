@@ -34,7 +34,6 @@ struct thread_data {
     struct node thread_node;
 };
 
-int fd;
 int sockfd;
 struct addrinfo *servinfo;
 
