@@ -40,7 +40,9 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
             return NULL; // No entry found for this char_offset
         }
     }
-    *entry_offset_byte_rtn = char_offset;
+    if (entry_offset_byte_rtn) {
+        *entry_offset_byte_rtn = char_offset; // Set the byte offset within the entry
+    }
     return buffer -> entry + current_index;
 }
 

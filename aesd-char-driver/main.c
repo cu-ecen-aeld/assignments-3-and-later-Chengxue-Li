@@ -97,6 +97,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     ssize_t retval = -ENOMEM;
     struct aesd_dev *dev;
     const char *dst;
+    struct aesd_buffer_entry *oldest_entry;
     PDEBUG("write %zu bytes with offset %lld",count,*f_pos);
     /**
      * TODO: handle write
@@ -141,6 +142,15 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     // Check if the write entry ends with a newline character
     if (dev->write_entry.size > 0 && dev->write_entry.buffptr[dev->write_entry.size - 1] == '\n') {
         // If it does, add the write entry to the circular buffer
+        // But before adding, if the buffer is full, we need to free the oldest entry
+        if (dev->circular_buffer.full) {
+            PDEBUG("Circular buffer is full, removing oldest entry");
+            oldest_entry = aesd_circular_buffer_find_entry_offset_for_fpos(&dev->circular_buffer, 0, NULL);
+
+                kfree((void *)oldest_entry->buffptr); // Free the oldest entry buffer
+                oldest_entry->buffptr = NULL; // Set pointer to NULL after freeing
+
+        }
         aesd_circular_buffer_add_entry(&dev->circular_buffer, &dev->write_entry);
         PDEBUG("Write entry added to circular buffer");
         dev->write_entry.buffptr = NULL; // Reset the write entry buffer pointer
