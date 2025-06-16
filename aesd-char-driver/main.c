@@ -62,12 +62,14 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
     /**
      * TODO: handle read
      */
+    dev = filp->private_data;
+
     if (down_interruptible(&dev->sem)) {
         PDEBUG("Failed to acquire semaphore");
         return -ERESTARTSYS; // Interrupted by a signal
     }
     PDEBUG("Acquired semaphore for reading");
-    dev = filp->private_data;
+    
     buffer_entry = aesd_circular_buffer_find_entry_offset_for_fpos(&dev->circular_buffer, *f_pos, &entry_offset_byte);
     if (buffer_entry == NULL) {
         PDEBUG("No entry found for the given file position");
@@ -102,12 +104,14 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     /**
      * TODO: handle write
      */
+    dev = filp->private_data;
+
     if (down_interruptible(&dev->sem)) {
         PDEBUG("Failed to acquire semaphore");
         return -ERESTARTSYS; // Interrupted by a signal
     }
     PDEBUG("Acquired semaphore for writing");
-    dev = filp->private_data;
+    
     // If the write entry buffer is NULL, allocate memory for it.
     if (dev->write_entry.buffptr == NULL) {
         dev->write_entry.buffptr = kmalloc(count, GFP_KERNEL);
